@@ -1,0 +1,28 @@
+{
+  "name": "blockchain-gr40-escrow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema Escrow mediante Smart Contracts - Proyecto Final Blockchain GR40",
+  "license": "MIT",
+  "packageManager": "yarn@1.22.22",
+  "scripts": {
+    "setup": "yarn install",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "local:node": "hardhat node --hostname 127.0.0.1 --port 8545",
+    "local:deploy": "hardhat run scripts/deploy.js --network localhost",
+    "local:interact": "cross-env HARDHAT_NETWORK=localhost node scripts/interact.js",
+    "amoy:deploy": "hardhat run scripts/deploy.js --network amoy",
+    "amoy:interact": "cross-env HARDHAT_NETWORK=amoy node scripts/interact.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "chai": "^4.5.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.5",
+    "hardhat": "^2.22.1"
+  }
+}
