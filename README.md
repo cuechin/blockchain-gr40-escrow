@@ -36,27 +36,7 @@ Este proyecto implementa un sistema de Escrow descentralizado sobre la blockchai
 
 El proyecto sigue la arquitectura estándar de una DApp (Aplicación Descentralizada) con tres capas:
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   CAPA DE PRESENTACIÓN                  │
-│                   (Frontend / Web UI)                   │
-│         HTML + JavaScript + ethers.js + MetaMask        │
-└────────────────────────┬────────────────────────────────┘
-                         │  JSON-RPC (via MetaMask / Provider)
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│                 CAPA DE SMART CONTRACTS                 │
-│                     Escrow.sol                          │
-│              Solidity ^0.8.20 / Hardhat                 │
-└────────────────────────┬────────────────────────────────┘
-                         │  Transacciones / Lecturas
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│                   CAPA DE BLOCKCHAIN                    │
-│         Polygon Amoy Testnet / Hardhat Local            │
-│                     (EVM)                               │
-└─────────────────────────────────────────────────────────┘
-```
+![Diagrama de Arquitectura](images/diagrama-arquitectura.png)
 
 ### Stack Tecnológico
 
@@ -98,52 +78,15 @@ blockchain-gr40-escrow/
 
 ### Flujo Principal (Sin Disputa)
 
-```
-Comprador                    Smart Contract                   Vendedor
-    │                              │                              │
-    │  1. createEscrow(vendedor,   │                              │
-    │     árbitro) + envía fondos  │                              │
-    │─────────────────────────────►│                              │
-    │                              │  Fondos custodiados          │
-    │                              │  Estado: AWAITING_DELIVERY   │
-    │                              │                              │
-    │    (Vendedor entrega el      │                              │
-    │     bien/servicio off-chain) │                              │
-    │                              │                              │
-    │  2. confirmDelivery()        │                              │
-    │─────────────────────────────►│                              │
-    │                              │  3. Transfiere fondos ──────►│
-    │                              │  Estado: COMPLETED           │
-    │                              │                              │
-```
+![Diagrama de Flujo Principal sin disputa](images/diagrama-secuencia-sin-disputa.png)
 
 ### Flujo con Disputa
 
-```
-Comprador         Smart Contract          Árbitro            Vendedor
-    │                    │                    │                   │
-    │  1. createEscrow() │                    │                   │
-    │   + envía fondos   │                    │                   │
-    │───────────────────►│                    │                   │
-    │                    │ Estado:             │                   │
-    │                    │ AWAITING_DELIVERY   │                   │
-    │                    │                    │                   │
-    │  2. raiseDispute() │                    │                   │
-    │───────────────────►│                    │                   │
-    │                    │ Estado: DISPUTED    │                   │
-    │                    │                    │                   │
-    │                    │ 3. resolveDispute() │                   │
-    │                    │◄───────────────────│                   │
-    │                    │                    │                   │
-    │  Si falla a favor  │                    │                   │
-    │  del vendedor:     │  Transfiere ──────────────────────────►│
-    │                    │  Estado: COMPLETED  │                   │
-    │                    │                    │                   │
-    │  Si falla a favor  │                    │                   │
-    │◄───── Reembolso ──│                    │                   │
-    │  del comprador:    │  Estado: REFUNDED   │                   │
-    │                    │                    │                   │
-```
+![Diagrama de Flujo Principal con disputa](images/diagrama-secuencia-con-disputa.png)
+
+### Diagrama de Estados
+
+![Diagrama de Flujo Principal con disputa](images/diagrama-estados.png)
 
 ### Estados del Escrow
 
@@ -158,41 +101,7 @@ Comprador         Smart Contract          Árbitro            Vendedor
 
 ## Diagrama de Componentes
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                         USUARIO / NAVEGADOR                      │
-│  ┌──────────────┐    ┌──────────────┐    ┌────────────────────┐  │
-│  │  index.html  │◄──►│    app.js    │◄──►│     MetaMask       │  │
-│  │  (UI Escrow) │    │  (ethers.js) │    │  (Wallet/Signer)   │  │
-│  └──────────────┘    └──────┬───────┘    └────────┬───────────┘  │
-│                             │                     │              │
-└─────────────────────────────┼─────────────────────┼──────────────┘
-                              │ ABI + Contract Addr │ JSON-RPC
-                              ▼                     ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                    BLOCKCHAIN (EVM)                               │
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │                     Escrow.sol                             │  │
-│  │                                                            │  │
-│  │  ┌──────────────────┐  ┌────────────────────────────────┐  │  │
-│  │  │   Storage        │  │   Funciones                    │  │  │
-│  │  │                  │  │                                │  │  │
-│  │  │  - buyer         │  │  + createEscrow()              │  │  │
-│  │  │  - seller        │  │  + confirmDelivery()           │  │  │
-│  │  │  - arbiter       │  │  + raiseDispute()              │  │  │
-│  │  │  - amount        │  │  + resolveDispute()            │  │  │
-│  │  │  - state         │  │  + getEscrowDetails()          │  │  │
-│  │  │                  │  │                                │  │  │
-│  │  └──────────────────┘  └────────────────────────────────┘  │  │
-│  │                                                            │  │
-│  │  Events: FundsDeposited, DeliveryConfirmed,                │  │
-│  │          DisputeRaised, DisputeResolved, FundsRefunded     │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  Red: Hardhat Local (31337) / Polygon Amoy Testnet (80002)       │
-└──────────────────────────────────────────────────────────────────┘
-```
+![Diagrama de Flujo Principal con disputa](images/diagrama-componentes.png)
 
 ### Interacción entre Componentes
 
@@ -202,7 +111,7 @@ Comprador         Smart Contract          Árbitro            Vendedor
 | **app.js** | Conecta la UI con el contrato vía ethers.js | MetaMask, Escrow.sol |
 | **MetaMask** | Firma transacciones y gestiona cuentas | Blockchain (JSON-RPC) |
 | **Escrow.sol** | Lógica de negocio on-chain: custodia, liberación, disputas | Blockchain (EVM) |
-| **Hardhat** | Compilación, testing, despliegue | Escrow.sol, Blockchain |
+| **Hardhat** | Compilación, testing y despliegue (entorno de desarrollo) | Escrow.sol, Blockchain |
 
 ---
 
