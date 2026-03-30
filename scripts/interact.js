@@ -35,6 +35,24 @@ async function main() {
   console.log("Stored amount:", ethers.formatEther(escrowData.amount), "ETH/POL");
   console.log("Stored state:", escrowData.state.toString(), "(0 = AWAITING_DELIVERY)");
   console.log("Contract balance:", ethers.formatEther(contractBalance), "ETH/POL");
+
+  // --- confirmDelivery ---
+  console.log("\n--- Confirming delivery ---");
+  const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
+
+  const tx2 = await escrow.connect(buyer).confirmDelivery(escrowId);
+  const receipt2 = await tx2.wait();
+  console.log("confirmDelivery tx hash:", receipt2.hash);
+
+  const escrowAfter = await escrow.escrows(escrowId);
+  const states = ["AWAITING_DELIVERY", "DISPUTED", "COMPLETED", "REFUNDED"];
+  console.log("State after confirm:", states[Number(escrowAfter.state)]);
+
+  const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
+  console.log("Seller received:", ethers.formatEther(sellerBalanceAfter - sellerBalanceBefore), "ETH/POL");
+
+  const contractBalanceAfter = await ethers.provider.getBalance(contractAddress);
+  console.log("Contract balance after:", ethers.formatEther(contractBalanceAfter), "ETH/POL");
 }
 
 main().catch((error) => {

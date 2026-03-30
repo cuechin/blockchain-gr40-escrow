@@ -72,4 +72,53 @@ describe("Escrow", function () {
 			).to.be.revertedWith("Seller no puede ser arbiter");
 		});
 	});
+
+	describe("confirmDelivery", function () {
+		const amount = ethers.parseEther("1.0");
+
+		beforeEach(async function () {
+			await escrow.connect(buyer).createEscrow(seller.address, arbiter.address, { value: amount });
+		});
+
+		it("should transfer funds to seller and set state to COMPLETED", async function () {
+			const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
+
+			const tx = await escrow.connect(buyer).confirmDelivery(0);
+			await tx.wait();
+
+			const data = await escrow.escrows(0);
+			expect(data.state).to.equal(2); // COMPLETED
+
+			const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
+			expect(sellerBalanceAfter - sellerBalanceBefore).to.equal(amount);
+
+			const contractBalance = await ethers.provider.getBalance(await escrow.getAddress());
+			expect(contractBalance).to.equal(0);
+		});
+
+		it("should emit DeliveryConfirmed event", async function () {
+			await expect(escrow.connect(buyer).confirmDelivery(0))
+				.to.emit(escrow, "DeliveryConfirmed")
+				.withArgs(0, buyer.address, seller.address, amount);
+		});
+
+		it("should revert if caller is not the buyer", async function () {
+			await expect(
+				escrow.connect(seller).confirmDelivery(0)
+			).to.be.revertedWith("Solo el buyer puede confirmar");
+		});
+
+		it("should revert if escrow does not exist", async function () {
+			await expect(
+				escrow.connect(buyer).confirmDelivery(99)
+			).to.be.revertedWith("Escrow no existe");
+		});
+
+		it("should revert if already completed", async function () {
+			await escrow.connect(buyer).confirmDelivery(0);
+			await expect(
+				escrow.connect(buyer).confirmDelivery(0)
+			).to.be.revertedWith("Estado invalido");
+		});
+	});
 });

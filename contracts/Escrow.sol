@@ -25,6 +25,13 @@ contract Escrow {
         uint256 amount
     );
 
+    event DeliveryConfirmed(
+        uint256 indexed escrowId,
+        address indexed buyer,
+        address indexed seller,
+        uint256 amount
+    );
+
     /// @notice El comprador crea un escrow depositando fondos
     /// @param _seller Dirección del vendedor
     /// @param _arbiter Dirección del árbitro
@@ -51,5 +58,26 @@ contract Escrow {
         emit EscrowCreated(escrowId, msg.sender, _seller, _arbiter, msg.value);
 
         return escrowId;
+    }
+
+    /// @notice El comprador confirma la entrega y libera los fondos al vendedor
+    /// @param _escrowId Identificador del escrow
+    function confirmDelivery(uint256 _escrowId) external {
+        EscrowData storage e = escrows[_escrowId];
+        require(e.buyer != address(0), "Escrow no existe");
+        require(msg.sender == e.buyer, "Solo el buyer puede confirmar");
+        require(e.state == State.AWAITING_DELIVERY, "Estado invalido");
+
+        uint256 amount = e.amount;
+        address payable seller = e.seller;
+
+        // Effects antes de interactions
+        e.state = State.COMPLETED;
+
+        // Interaction
+        (bool success, ) = seller.call{value: amount}("");
+        require(success, "Transferencia fallida");
+
+        emit DeliveryConfirmed(_escrowId, msg.sender, seller, amount);
     }
 }
