@@ -2,10 +2,25 @@
 pragma solidity ^0.8.20;
 
 /// @title Escrow Smart Contract
+/// @author Daniel Araya & Andrés Mora
+/// @notice Enables secure fund holding between buyer, seller, and arbiter
+/// @dev Implements dispute resolution and safe fund transfer patterns
 contract Escrow {
 
+
+    /// @notice Represents the state of an escrow
+    /// AWAITING_DELIVERY: Funds are locked, waiting for confirmation
+    /// DISPUTED: Dispute has been raised
+    /// COMPLETED: Funds released to seller
+    /// REFUNDED: Funds returned to buyer
     enum State { AWAITING_DELIVERY, DISPUTED, COMPLETED, REFUNDED }
 
+    /// @notice Stores all escrow details
+    /// @param buyer Address of the buyer
+    /// @param seller Address of the seller
+    /// @param arbiter Address responsible for dispute resolution
+    /// @param amount Amount of funds locked in escrow
+    /// @param state Current state of the escrow
     struct EscrowData {
         address payable buyer;
         address payable seller;
@@ -46,10 +61,10 @@ contract Escrow {
         _;
     }
 
-    /// @notice El comprador crea un escrow depositando fondos
-    /// @param _seller Dirección del vendedor
-    /// @param _arbiter Dirección del árbitro
-    /// @return escrowId Identificador del escrow creado
+    /// @notice Creates a new escrow and locks funds
+    /// @param _seller Address of the seller
+    /// @param _arbiter Address of the arbiter
+    /// @return escrowId The ID of the created escrow
     function createEscrow(address payable _seller, address _arbiter) external payable returns (uint256) {
         require(msg.value > 0, "Must  send funds");
         require(_seller != address(0), "Invalid seller");
@@ -74,8 +89,9 @@ contract Escrow {
         return escrowId;
     }
 
-    /// @notice El comprador confirma la entrega y libera los fondos al vendedor
-    /// @param _escrowId Identificador del escrow
+    /// @notice Buyer confirms delivery and releases funds to seller
+    /// @param _escrowId ID of the escrow
+    /// @dev Uses checks-effects-interactions pattern
     function confirmDelivery(uint256 _escrowId) external
         escrowExists(_escrowId)
         onlyBuyer(_escrowId){
@@ -97,6 +113,9 @@ contract Escrow {
         emit DeliveryConfirmed(_escrowId, msg.sender, seller, amount);
     }
 
+    /// @notice Raises a dispute for an escrow
+    /// @param _escrowId ID of the escrow
+    /// @dev Can be called by buyer or seller only
     function raiseDispute(uint256 _escrowId) external escrowExists(_escrowId){
         EscrowData storage e = escrows[_escrowId];
 
@@ -108,6 +127,10 @@ contract Escrow {
         emit DisputeRaised(_escrowId);
     }
 
+    /// @notice Resolves a dispute and releases funds
+    /// @param _escrowId ID of the escrow
+    /// @param releaseToSeller True if seller wins, false if buyer gets refunded
+    /// @dev Only arbiter can call this function
     function resolveDispute(uint256 _escrowId, bool releaseToSeller) external escrowExists(_escrowId){
         EscrowData storage e = escrows[_escrowId];
 
