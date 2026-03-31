@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// @title Escrow - Sistema de custodia de fondos entre comprador, vendedor y árbitro
+/// @title Escrow Smart Contract
 contract Escrow {
 
     enum State { AWAITING_DELIVERY, DISPUTED, COMPLETED, REFUNDED }
@@ -32,17 +32,31 @@ contract Escrow {
         uint256 amount
     );
 
+    event DisputeRaised(uint256 indexed escrowId);
+
+    event DisputeResolved(uint256 indexed escrowId, bool sellerWon);
+
+    modifier escrowExists(uint256 _id) {
+        require(escrows[_id].buyer != address(0), "Escrow doesn't exist");
+        _;
+    }
+
+    modifier onlyBuyer(uint256 _id) {
+        require(msg.sender == escrows[_id].buyer, "Only the buyer");
+        _;
+    }
+
     /// @notice El comprador crea un escrow depositando fondos
     /// @param _seller Dirección del vendedor
     /// @param _arbiter Dirección del árbitro
     /// @return escrowId Identificador del escrow creado
     function createEscrow(address payable _seller, address _arbiter) external payable returns (uint256) {
-        require(msg.value > 0, "Debe enviar fondos");
-        require(_seller != address(0), "Seller invalido");
-        require(_arbiter != address(0), "Arbiter invalido");
-        require(msg.sender != _seller, "Buyer no puede ser seller");
-        require(msg.sender != _arbiter, "Buyer no puede ser arbiter");
-        require(_seller != _arbiter, "Seller no puede ser arbiter");
+        require(msg.value > 0, "Must  send funds");
+        require(_seller != address(0), "Invalid seller");
+        require(_arbiter != address(0), "Invalid arbiter");
+        require(msg.sender != _seller, "Buyer can't be seller");
+        require(msg.sender != _arbiter, "Buyer can't be arbiter");
+        require(_seller != _arbiter, "Seller can't be arbiter");
 
         uint256 escrowId = escrowCount;
         escrowCount++;
@@ -62,22 +76,61 @@ contract Escrow {
 
     /// @notice El comprador confirma la entrega y libera los fondos al vendedor
     /// @param _escrowId Identificador del escrow
-    function confirmDelivery(uint256 _escrowId) external {
+    function confirmDelivery(uint256 _escrowId) external
+        escrowExists(_escrowId)
+        onlyBuyer(_escrowId){
         EscrowData storage e = escrows[_escrowId];
-        require(e.buyer != address(0), "Escrow no existe");
-        require(msg.sender == e.buyer, "Solo el buyer puede confirmar");
-        require(e.state == State.AWAITING_DELIVERY, "Estado invalido");
+        
+        require(e.state == State.AWAITING_DELIVERY, "Invalid state");
 
         uint256 amount = e.amount;
         address payable seller = e.seller;
 
         // Effects antes de interactions
         e.state = State.COMPLETED;
+        e.amount = 0;
 
         // Interaction
         (bool success, ) = seller.call{value: amount}("");
-        require(success, "Transferencia fallida");
+        require(success, "Failed transaction");
 
         emit DeliveryConfirmed(_escrowId, msg.sender, seller, amount);
+    }
+
+    function raiseDispute(uint256 _escrowId) external escrowExists(_escrowId){
+        EscrowData storage e = escrows[_escrowId];
+
+        require(msg.sender == e.buyer || msg.sender == e.seller, "Unauthorized");
+        require(e.state == State.AWAITING_DELIVERY, "Invalid state");
+
+        e.state = State.DISPUTED;
+
+        emit DisputeRaised(_escrowId);
+    }
+
+    function resolveDispute(uint256 _escrowId, bool releaseToSeller) external escrowExists(_escrowId){
+        EscrowData storage e = escrows[_escrowId];
+
+        require(msg.sender == e.arbiter, "Only the arbiter");
+        require(e.state == State.DISPUTED, "Isn't in dispute");
+
+        uint256 amount = e.amount;
+
+        // Effects
+        e.amount = 0;
+
+        if (releaseToSeller) {
+            e.state = State.COMPLETED;
+
+            (bool success, ) = e.seller.call{value: amount}("");
+            require(success, "Error transferring funds to seller");
+        } else {
+            e.state = State.REFUNDED;
+
+            (bool success, ) = e.buyer.call{value: amount}("");
+            require(success, "Error refunding buyer");
+        }
+
+        emit DisputeResolved(_escrowId, releaseToSeller);
     }
 }
