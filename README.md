@@ -211,6 +211,39 @@ yarn local:node
 yarn local:deploy
 ```
 
+### Interactuar Localmente (createEscrow + confirmDelivery)
+
+Con el nodo local corriendo (`yarn local:node`) y el contrato desplegado (`yarn local:deploy`), ejecutar:
+
+```bash
+ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+```
+
+Reemplazar `0xDIRECCION_DEL_CONTRATO` con la dirección que imprimió el deploy.
+
+El script realiza automáticamente:
+
+1. **createEscrow**: El buyer (Account #0) deposita 1 ETH en el contrato, asignando al seller (Account #1) y al arbiter (Account #2).
+2. **confirmDelivery**: El buyer confirma la entrega, los fondos se transfieren al seller y el estado cambia a `COMPLETED`.
+
+Ejemplo de salida esperada:
+
+```
+Contract address: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+Buyer: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Seller: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+Arbiter: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+Deposit amount: 1.0 ETH/POL
+Escrow created with id: 0
+Stored state: 0 (0 = AWAITING_DELIVERY)
+Contract balance: 1.0 ETH/POL
+
+--- Confirming delivery ---
+State after confirm: COMPLETED
+Seller received: 1.0 ETH/POL
+Contract balance after: 0.0 ETH/POL
+```
+
 ### Desplegar en Polygon Amoy
 
 ```bash
