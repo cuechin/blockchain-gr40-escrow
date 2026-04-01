@@ -125,7 +125,7 @@ El flujo inicia cuando el comprador crea el escrow y deposita los fondos en el c
 Una vez entregado el bien o servicio (off-chain), el comprador confirma la entrega, 
 lo que provoca la liberación automática de los fondos al vendedor.
 
-![Diagrama de Flujo Principal sin disputa](images/diagrama-secuencia-sin-disputa.png)
+![Diagrama de Flujo Principal sin disputa](images/diagrama-secuencia-sin-disputa.jpg)
 
 ### Flujo con Disputa
 
@@ -133,7 +133,7 @@ Si existe desacuerdo entre las partes, cualquiera puede abrir una disputa.
 En este estado, el contrato bloquea los fondos hasta que el árbitro interviene 
 y decide si liberar el pago al vendedor o reembolsar al comprador.
 
-![Diagrama de Flujo Principal con disputa](images/diagrama-secuencia-con-disputa.png)
+![Diagrama de Flujo Principal con disputa](images/diagrama-secuencia-con-disputa.jpg)
 
 ### Diagrama de Estados
 
@@ -141,7 +141,7 @@ El contrato funciona como una máquina de estados, donde cada transición
 está controlada por funciones específicas y validaciones de acceso, 
 garantizando que no se ejecuten acciones inválidas.
 
-![Diagrama de Estados](images/diagrama-estados.png)
+![Diagrama de Estados](images/diagrama-estados.jpg)
 
 ### Estados del Escrow
 
@@ -161,7 +161,7 @@ El frontend gestiona la interfaz de usuario y utiliza ethers.js para comunicarse
 MetaMask actúa como intermediario para firmar transacciones y conectarse a la red blockchain mediante el provider JSON-RPC. 
 El smart contract ejecuta la lógica de negocio on-chain, mientras que Hardhat se utiliza únicamente como entorno de desarrollo para compilación, testing y despliegue.
 
-![Diagrama de Componentes](images/diagrama-componentes.png)
+![Diagrama de Componentes](images/diagrama-componentes.jpg)
 
 ### Interacción entre Componentes
 
@@ -244,19 +244,26 @@ El flujo completo (`ACTION=full`) realiza automáticamente:
 Ejemplo de salida esperada:
 
 ```
-Contract address: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+Contract: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+--- CREATE ESCROW ---
 Buyer: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 Seller: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
 Arbiter: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
-Deposit amount: 1.0 ETH/POL
-Escrow created with id: 0
-Stored state: 0 (0 = AWAITING_DELIVERY)
-Contract balance: 1.0 ETH/POL
+Amount: 1.0 ETH
+Escrow ID: 0
 
---- Confirming delivery ---
-State after confirm: COMPLETED
-Seller received: 1.0 ETH/POL
-Contract balance after: 0.0 ETH/POL
+--- RAISE DISPUTE ---
+Dispute opened
+
+--- RESOLVE DISPUTE ---
+Winner: SELLER
+Seller received: 1.0
+
+--- STATE ---
+State: COMPLETED
+Amount: 0.0
+Contract balance: 0.0
 ```
 
 ### Desplegar en Polygon Amoy
