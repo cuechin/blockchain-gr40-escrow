@@ -1,6 +1,6 @@
-# blockchain-gr40-escrow
+# Escrow DApp
 
-Proyecto final del curso **Blockchain y Ledgers Distribuidos GR40**: implementación de un sistema Escrow mediante Smart Contracts.
+Sistema de custodia descentralizado que permite a compradores y vendedores realizar transacciones seguras mediante Smart Contracts, con resolución de disputas a través de un árbitro neutral.
 
 ---
 
@@ -63,7 +63,7 @@ El sistema combina lógica on-chain segura con procesos off-chain inevitables en
 - Control de estados para evitar ejecuciones indebidas
 - Prevención de reentrancy en transferencias
 - Uso de patrón checks-effects-interactions
-- Riesgo de árbitro malicioso considerado en el diseño
+- Restricción de roles del árbitro: no puede ser comprador ni vendedor, y solo puede actuar cuando el escrow está en estado `DISPUTED`
 
 ---
 
