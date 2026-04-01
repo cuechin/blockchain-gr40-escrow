@@ -1,6 +1,6 @@
-# blockchain-gr40-escrow
+# Escrow DApp
 
-Proyecto final del curso **Blockchain y Ledgers Distribuidos GR40**: implementación de un sistema Escrow mediante Smart Contracts.
+Sistema de custodia descentralizado que permite a compradores y vendedores realizar transacciones seguras mediante Smart Contracts, con resolución de disputas a través de un árbitro neutral.
 
 ---
 
@@ -63,7 +63,7 @@ El sistema combina lógica on-chain segura con procesos off-chain inevitables en
 - Control de estados para evitar ejecuciones indebidas
 - Prevención de reentrancy en transferencias
 - Uso de patrón checks-effects-interactions
-- Riesgo de árbitro malicioso considerado en el diseño
+- Restricción de roles del árbitro: no puede ser comprador ni vendedor, y solo puede actuar cuando el escrow está en estado `DISPUTED`
 
 ---
 
@@ -79,7 +79,7 @@ El proyecto sigue una arquitectura típica de una DApp (Aplicación Descentraliz
 
 Esta arquitectura refleja el modelo real de interacción en aplicaciones Web3, donde la firma de transacciones y la comunicación con la red están desacopladas del frontend.
 
-![Diagrama de Arquitectura](images/diagrama-arquitectura.png)
+![Diagrama de Arquitectura](images/diagrama-arquitectura.jpg)
 
 ### Stack Tecnológico
 
@@ -125,7 +125,7 @@ El flujo inicia cuando el comprador crea el escrow y deposita los fondos en el c
 Una vez entregado el bien o servicio (off-chain), el comprador confirma la entrega, 
 lo que provoca la liberación automática de los fondos al vendedor.
 
-![Diagrama de Flujo Principal sin disputa](images/diagrama-secuencia-sin-disputa.png)
+![Diagrama de Flujo Principal sin disputa](images/diagrama-secuencia-sin-disputa.jpg)
 
 ### Flujo con Disputa
 
@@ -133,7 +133,7 @@ Si existe desacuerdo entre las partes, cualquiera puede abrir una disputa.
 En este estado, el contrato bloquea los fondos hasta que el árbitro interviene 
 y decide si liberar el pago al vendedor o reembolsar al comprador.
 
-![Diagrama de Flujo Principal con disputa](images/diagrama-secuencia-con-disputa.png)
+![Diagrama de Flujo Principal con disputa](images/diagrama-secuencia-con-disputa.jpg)
 
 ### Diagrama de Estados
 
@@ -141,7 +141,7 @@ El contrato funciona como una máquina de estados, donde cada transición
 está controlada por funciones específicas y validaciones de acceso, 
 garantizando que no se ejecuten acciones inválidas.
 
-![Diagrama de Estados](images/diagrama-estados.png)
+![Diagrama de Estados](images/diagrama-estados.jpg)
 
 ### Estados del Escrow
 
@@ -161,7 +161,7 @@ El frontend gestiona la interfaz de usuario y utiliza ethers.js para comunicarse
 MetaMask actúa como intermediario para firmar transacciones y conectarse a la red blockchain mediante el provider JSON-RPC. 
 El smart contract ejecuta la lógica de negocio on-chain, mientras que Hardhat se utiliza únicamente como entorno de desarrollo para compilación, testing y despliegue.
 
-![Diagrama de Componentes](images/diagrama-componentes.png)
+![Diagrama de Componentes](images/diagrama-componentes.jpg)
 
 ### Interacción entre Componentes
 
@@ -209,6 +209,61 @@ yarn local:node
 
 # Terminal 2: Desplegar contrato
 yarn local:deploy
+```
+
+### Interactuar Localmente
+
+Con el nodo local corriendo (`yarn local:node`) y el contrato desplegado (`yarn local:deploy`), ejecutar el script de interacción indicando la dirección del contrato y la acción deseada.
+
+#### Flujo completo (createEscrow + confirmDelivery)
+
+```bash
+ACTION=full ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+```
+
+#### Acciones individuales
+
+```bash
+# Confirmar entrega de un escrow existente
+ACTION=confirm ESCROW_ID=0 ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+
+# Abrir disputa
+ACTION=dispute ESCROW_ID=0 ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+
+# Resolver disputa (el árbitro decide a favor del seller o buyer)
+ACTION=resolve ESCROW_ID=0 SELLER_WINS=true ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+```
+
+Reemplazar `0xDIRECCION_DEL_CONTRATO` con la dirección que imprimió el deploy.
+
+El flujo completo (`ACTION=full`) realiza automáticamente:
+
+1. **createEscrow**: El buyer (Account #0) deposita 1 ETH en el contrato, asignando al seller (Account #1) y al arbiter (Account #2).
+2. **confirmDelivery**: El buyer confirma la entrega, los fondos se transfieren al seller y el estado cambia a `COMPLETED`.
+
+Ejemplo de salida esperada:
+
+```
+Contract: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+--- CREATE ESCROW ---
+Buyer: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Seller: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+Arbiter: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+Amount: 1.0 ETH
+Escrow ID: 0
+
+--- RAISE DISPUTE ---
+Dispute opened
+
+--- RESOLVE DISPUTE ---
+Winner: SELLER
+Seller received: 1.0
+
+--- STATE ---
+State: COMPLETED
+Amount: 0.0
+Contract balance: 0.0
 ```
 
 ### Desplegar en Polygon Amoy
