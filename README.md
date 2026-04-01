@@ -79,7 +79,7 @@ El proyecto sigue una arquitectura típica de una DApp (Aplicación Descentraliz
 
 Esta arquitectura refleja el modelo real de interacción en aplicaciones Web3, donde la firma de transacciones y la comunicación con la red están desacopladas del frontend.
 
-![Diagrama de Arquitectura](images/diagrama-arquitectura.png)
+![Diagrama de Arquitectura](images/diagrama-arquitectura.jpg)
 
 ### Stack Tecnológico
 
@@ -211,17 +211,32 @@ yarn local:node
 yarn local:deploy
 ```
 
-### Interactuar Localmente (createEscrow + confirmDelivery)
+### Interactuar Localmente
 
-Con el nodo local corriendo (`yarn local:node`) y el contrato desplegado (`yarn local:deploy`), ejecutar:
+Con el nodo local corriendo (`yarn local:node`) y el contrato desplegado (`yarn local:deploy`), ejecutar el script de interacción indicando la dirección del contrato y la acción deseada.
+
+#### Flujo completo (createEscrow + confirmDelivery)
 
 ```bash
-ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+ACTION=full ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+```
+
+#### Acciones individuales
+
+```bash
+# Confirmar entrega de un escrow existente
+ACTION=confirm ESCROW_ID=0 ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+
+# Abrir disputa
+ACTION=dispute ESCROW_ID=0 ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+
+# Resolver disputa (el árbitro decide a favor del seller o buyer)
+ACTION=resolve ESCROW_ID=0 SELLER_WINS=true ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
 ```
 
 Reemplazar `0xDIRECCION_DEL_CONTRATO` con la dirección que imprimió el deploy.
 
-El script realiza automáticamente:
+El flujo completo (`ACTION=full`) realiza automáticamente:
 
 1. **createEscrow**: El buyer (Account #0) deposita 1 ETH en el contrato, asignando al seller (Account #1) y al arbiter (Account #2).
 2. **confirmDelivery**: El buyer confirma la entrega, los fondos se transfieren al seller y el estado cambia a `COMPLETED`.
