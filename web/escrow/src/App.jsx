@@ -5,6 +5,7 @@ import ConnectWallet from "./components/ConnectWallet";
 import CreateEscrow from "./components/CreateEscrow";
 import EscrowDetails from "./components/EscrowDetails";
 import EscrowActions from "./components/EscrowActions";
+import EscrowList from "./components/EscrowList";
 
 function getNetworkInfo(chainId) {
   if (chainId === 80002) {
@@ -35,6 +36,7 @@ export default function App() {
   const [networkLabel, setNetworkLabel] = useState("Sin conectar");
   const [explorerBaseUrl, setExplorerBaseUrl] = useState("");
   const [status, setStatus] = useState("");
+  const [selectedEscrowId, setSelectedEscrowId] = useState(null);
 
   const connectWallet = useCallback(async () => {
     if (!window.ethereum) {
@@ -89,11 +91,20 @@ export default function App() {
       {contract && (
         <div className="main-content">
           <CreateEscrow contract={contract} setStatus={setStatus} />
-          <EscrowDetails contract={contract} account={account} />
+          <EscrowDetails
+            contract={contract}
+            account={account}
+            selectedEscrowId={selectedEscrowId}
+          />
           <EscrowActions
             contract={contract}
             account={account}
             setStatus={setStatus}
+          />
+          <EscrowList
+            contract={contract}
+            account={account}
+            onSelectEscrow={setSelectedEscrowId}
           />
         </div>
       )}
