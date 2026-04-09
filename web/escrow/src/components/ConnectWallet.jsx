@@ -98,7 +98,10 @@ export default function ConnectWallet({
             value={newOwner}
             onChange={(e) => setNewOwner(e.target.value)}
           />
-          <button onClick={handleTransferOwnership}>
+          <button
+            className="btn btn-secondary"
+            onClick={handleTransferOwnership}
+          >
             Transferir Ownership
           </button>
         </div>
