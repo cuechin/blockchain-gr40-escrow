@@ -10,6 +10,7 @@ export default function ConnectWallet({
 }) {
   const [owner, setOwner] = useState("");
   const [newOwner, setNewOwner] = useState("");
+  const [status, setStatus] = useState("");
 
   const handleTransferOwnership = async () => {
     try {
@@ -104,6 +105,7 @@ export default function ConnectWallet({
           >
             Transferir Ownership
           </button>
+          {status && <p className="owner-status">{status}</p>}
         </div>
       )}
     </div>
