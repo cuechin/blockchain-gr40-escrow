@@ -48,7 +48,11 @@ export default function App() {
       const userSigner = await browserProvider.getSigner();
       const network = await browserProvider.getNetwork();
       const networkInfo = getNetworkInfo(Number(network.chainId));
-      const escrowContract = new Contract(CONTRACT_ADDRESS, ESCROW_ABI, userSigner);
+      const escrowContract = new Contract(
+        CONTRACT_ADDRESS,
+        ESCROW_ABI,
+        userSigner,
+      );
 
       setProvider(browserProvider);
       setSigner(userSigner);
@@ -66,7 +70,9 @@ export default function App() {
     <div className="app">
       <header className="header">
         <h1>Escrow DApp</h1>
-        <p className="subtitle">Sistema de custodia descentralizado en Polygon Amoy</p>
+        <p className="subtitle">
+          Sistema de custodia descentralizado en Polygon Amoy
+        </p>
       </header>
 
       <ConnectWallet
@@ -75,6 +81,7 @@ export default function App() {
         contractAddress={CONTRACT_ADDRESS}
         networkLabel={networkLabel}
         explorerBaseUrl={explorerBaseUrl}
+        contract={contract}
       />
 
       {status && <div className="status error">{status}</div>}
@@ -83,7 +90,11 @@ export default function App() {
         <div className="main-content">
           <CreateEscrow contract={contract} setStatus={setStatus} />
           <EscrowDetails contract={contract} account={account} />
-          <EscrowActions contract={contract} account={account} setStatus={setStatus} />
+          <EscrowActions
+            contract={contract}
+            account={account}
+            setStatus={setStatus}
+          />
         </div>
       )}
     </div>

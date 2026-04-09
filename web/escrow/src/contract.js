@@ -1,28 +1,70 @@
-export const CONTRACT_ADDRESS = "0x0384B97Ca3D22B8e8340B02B3475F85476aD5EA5";
+export const CONTRACT_ADDRESS = "0xf5B507266a912BBF8a0139e4A78f90045a33a69D";
 
 export const ESCROW_ABI = [
   {
+    inputs: [],
+    stateMutability: "nonpayable",
+    type: "constructor",
+  },
+  {
     anonymous: false,
     inputs: [
-      { indexed: true, internalType: "uint256", name: "escrowId", type: "uint256" },
-      { indexed: true, internalType: "address", name: "buyer", type: "address" },
-      { indexed: true, internalType: "address", name: "seller", type: "address" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "escrowId",
+        type: "uint256",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "buyer",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "seller",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
     ],
     name: "DeliveryConfirmed",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [{ indexed: true, internalType: "uint256", name: "escrowId", type: "uint256" }],
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "escrowId",
+        type: "uint256",
+      },
+    ],
     name: "DisputeRaised",
     type: "event",
   },
   {
     anonymous: false,
     inputs: [
-      { indexed: true, internalType: "uint256", name: "escrowId", type: "uint256" },
-      { indexed: false, internalType: "bool", name: "sellerWon", type: "bool" },
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "escrowId",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "bool",
+        name: "sellerWon",
+        type: "bool",
+      },
     ],
     name: "DisputeResolved",
     type: "event",
@@ -30,17 +72,93 @@ export const ESCROW_ABI = [
   {
     anonymous: false,
     inputs: [
-      { indexed: true, internalType: "uint256", name: "escrowId", type: "uint256" },
-      { indexed: true, internalType: "address", name: "buyer", type: "address" },
-      { indexed: true, internalType: "address", name: "seller", type: "address" },
-      { indexed: false, internalType: "address", name: "arbiter", type: "address" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "escrowId",
+        type: "uint256",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "buyer",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "seller",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "arbiter",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
     ],
     name: "EscrowCreated",
     type: "event",
   },
   {
-    inputs: [{ internalType: "uint256", name: "_escrowId", type: "uint256" }],
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "oldOwner",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "OwnershipTransferred",
+    type: "event",
+  },
+  {
+    inputs: [],
+    name: "ESCROW_DURATION",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_escrowId",
+        type: "uint256",
+      },
+    ],
+    name: "claimTimeout",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_escrowId",
+        type: "uint256",
+      },
+    ],
     name: "confirmDelivery",
     outputs: [],
     stateMutability: "nonpayable",
@@ -48,36 +166,235 @@ export const ESCROW_ABI = [
   },
   {
     inputs: [
-      { internalType: "address payable", name: "_seller", type: "address" },
-      { internalType: "address", name: "_arbiter", type: "address" },
+      {
+        internalType: "address payable",
+        name: "_seller",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_arbiter",
+        type: "address",
+      },
     ],
     name: "createEscrow",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
     stateMutability: "payable",
     type: "function",
   },
   {
     inputs: [],
     name: "escrowCount",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    name: "escrows",
     outputs: [
-      { internalType: "address payable", name: "buyer", type: "address" },
-      { internalType: "address payable", name: "seller", type: "address" },
-      { internalType: "address", name: "arbiter", type: "address" },
-      { internalType: "uint256", name: "amount", type: "uint256" },
-      { internalType: "enum Escrow.State", name: "state", type: "uint8" },
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
     ],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [{ internalType: "uint256", name: "_escrowId", type: "uint256" }],
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "escrows",
+    outputs: [
+      {
+        internalType: "address payable",
+        name: "buyer",
+        type: "address",
+      },
+      {
+        internalType: "address payable",
+        name: "seller",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "arbiter",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        internalType: "enum Escrow.State",
+        name: "state",
+        type: "uint8",
+      },
+      {
+        internalType: "uint256",
+        name: "deadline",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "escrowsByArbiter",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "escrowsByBuyer",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "escrowsBySeller",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_arbiter",
+        type: "address",
+      },
+    ],
+    name: "getEscrowsByArbiter",
+    outputs: [
+      {
+        internalType: "uint256[]",
+        name: "",
+        type: "uint256[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_buyer",
+        type: "address",
+      },
+    ],
+    name: "getEscrowsByBuyer",
+    outputs: [
+      {
+        internalType: "uint256[]",
+        name: "",
+        type: "uint256[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_seller",
+        type: "address",
+      },
+    ],
+    name: "getEscrowsBySeller",
+    outputs: [
+      {
+        internalType: "uint256[]",
+        name: "",
+        type: "uint256[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "owner",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_escrowId",
+        type: "uint256",
+      },
+    ],
     name: "raiseDispute",
     outputs: [],
     stateMutability: "nonpayable",
@@ -85,10 +402,31 @@ export const ESCROW_ABI = [
   },
   {
     inputs: [
-      { internalType: "uint256", name: "_escrowId", type: "uint256" },
-      { internalType: "bool", name: "releaseToSeller", type: "bool" },
+      {
+        internalType: "uint256",
+        name: "_escrowId",
+        type: "uint256",
+      },
+      {
+        internalType: "bool",
+        name: "releaseToSeller",
+        type: "bool",
+      },
     ],
     name: "resolveDispute",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "transferOwnership",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
