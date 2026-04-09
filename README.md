@@ -349,3 +349,51 @@ Para probar contra el nodo local de Hardhat en lugar de Amoy:
 4. Importar cuentas de prueba usando las private keys que imprime `yarn local:node`
 5. Actualizar `CONTRACT_ADDRESS` en `web/escrow/src/contract.js` con la dirección del deploy local
 6. Levantar la DApp: `cd web/escrow && yarn dev`
+
+---
+
+## Despliegue y pruebas en Polygon Amoy
+
+### Contrato desplegado
+
+| Dato | Valor |
+|------|-------|
+| **Red** | Polygon Amoy Testnet |
+| **Contrato** | [`0x0384B97Ca3D22B8e8340B02B3475F85476aD5EA5`](https://amoy.polygonscan.com/address/0x0384B97Ca3D22B8e8340B02B3475F85476aD5EA5) |
+| **Deployer** | [`0xF68675aDdE468b722966b22b87133Bad87D5eCd6`](https://amoy.polygonscan.com/address/0xF68675aDdE468b722966b22b87133Bad87D5eCd6) |
+
+### Pruebas realizadas on-chain
+
+#### Escrow #0 — Flujo sin disputa (confirmDelivery)
+
+| Paso | Tx |
+|------|----|
+| createEscrow (0.01 POL) | [`0x83e01b...`](https://amoy.polygonscan.com/tx/0x83e01b63a2482f1865b0725e8f1903f56c5fa153a9f11c92f5af527905353e8b) |
+| confirmDelivery → Seller recibe 0.01 POL | [`0x1506a4...`](https://amoy.polygonscan.com/tx/0x1506a492f0ca2eb01fa1aa25db73599fd2a2779f594c5d8453ca2662511db04f) |
+| **Estado final** | **COMPLETED** |
+
+#### Escrow #1 — Disputa resuelta a favor del Seller
+
+| Paso | Tx |
+|------|----|
+| createEscrow (0.01 POL) | [`0x44581c...`](https://amoy.polygonscan.com/tx/0x44581c335c44be1a8dcea68ba834e9b7c9a0aff1b36e0545746ff6fa49550434) |
+| raiseDispute | [`0xd00ed6...`](https://amoy.polygonscan.com/tx/0xd00ed63082504cff4c2c9d282db589b766a66f51fbcb168e08a19966200c339f) |
+| resolveDispute(true) → Seller recibe 0.01 POL | [`0x0fa75e...`](https://amoy.polygonscan.com/tx/0x0fa75e5a6d9d8ab088a18149b1ee5fa231977f3d61cceea6b03c7af6e0cfc232) |
+| **Estado final** | **COMPLETED** |
+
+#### Escrow #3 — Disputa resuelta a favor del Buyer
+
+| Paso | Tx |
+|------|----|
+| createEscrow (0.01 POL) | [`0x07f0b7...`](https://amoy.polygonscan.com/tx/0x07f0b7a8f25a82c8fd168bab6781a2128a01ce12981bc2079f1ed331a3212e0f) |
+| raiseDispute | [`0x01e1e4...`](https://amoy.polygonscan.com/tx/0x01e1e4f7f5619d720b4630edc4abeea42c1e1b6fdce2f49f4c79cb3b19feb713) |
+| resolveDispute(false) → Buyer reembolsado 0.01 POL | [`0x361452...`](https://amoy.polygonscan.com/tx/0x361452b083653588510646db06b0322181d9e586ff5d2b8731136dffe35adfc0) |
+| **Estado final** | **REFUNDED** |
+
+### Actores de prueba
+
+| Rol | Dirección |
+|-----|----------|
+| Buyer | [`0xF68675aDdE468b722966b22b87133Bad87D5eCd6`](https://amoy.polygonscan.com/address/0xF68675aDdE468b722966b22b87133Bad87D5eCd6) |
+| Seller | [`0xa70C55497eAD474DF12D755A9779661B47a0f15e`](https://amoy.polygonscan.com/address/0xa70C55497eAD474DF12D755A9779661B47a0f15e) |
+| Arbiter | [`0x5faf5678b20C3f6dC20894E6745e260776cd1486`](https://amoy.polygonscan.com/address/0x5faf5678b20C3f6dC20894E6745e260776cd1486) |
