@@ -15,11 +15,14 @@ export default function CreateEscrow({ contract, setStatus }) {
     try {
       const tx = await contract.createEscrow(seller, arbiter, {
         value: parseEther(amount),
+        gasLimit: 500000,
       });
       setStatus("Transacción enviada. Esperando confirmación...");
       const receipt = await tx.wait();
       const escrowCount = await contract.escrowCount();
-      setStatus(`Escrow #${(escrowCount - 1n).toString()} creado exitosamente. Tx: ${receipt.hash}`);
+      setStatus(
+        `Escrow #${(escrowCount - 1n).toString()} creado exitosamente. Tx: ${receipt.hash}`,
+      );
       setSeller("");
       setArbiter("");
       setAmount("");

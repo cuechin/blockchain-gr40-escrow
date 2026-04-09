@@ -6,17 +6,36 @@ export default function EscrowActions({ contract, account, setStatus }) {
 
   const execute = async (label, action) => {
     if (escrowId === "") return;
+
     setLoading(true);
     setStatus("");
 
     try {
-      setStatus(`${label}: enviando transacción...`);
+      const id = Number(escrowId);
+      const e = await contract.escrows(id);
+
+      const now = Math.floor(Date.now() / 1000);
+
+      if (label === "Claim Timeout") {
+        if (Number(e.state) !== 0) {
+          setStatus("El escrow no está en estado AWAITING_DELIVERY");
+          setLoading(false);
+          return;
+        }
+
+        if (now <= Number(e.deadline)) {
+          setStatus("El escrow aún no ha expirado");
+          setLoading(false);
+          return;
+        }
+      }
+
       const tx = await action();
-      setStatus(`${label}: esperando confirmación...`);
       await tx.wait();
+
       setStatus(`${label} completado exitosamente.`);
     } catch (err) {
-      setStatus(`Error en ${label}: ` + (err.reason || err.message));
+      setStatus(`Error: ${err.reason || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -29,10 +48,12 @@ export default function EscrowActions({ contract, account, setStatus }) {
     execute("Raise Dispute", () => contract.raiseDispute(escrowId));
 
   const handleResolve = (sellerWins) =>
-    execute(
-      sellerWins ? "Resolve → Seller" : "Resolve → Buyer",
-      () => contract.resolveDispute(escrowId, sellerWins)
+    execute(sellerWins ? "Resolve → Seller" : "Resolve → Buyer", () =>
+      contract.resolveDispute(escrowId, sellerWins),
     );
+
+  const handleClaimTimeout = () =>
+    execute("Claim Timeout", () => contract.claimTimeout(Number(escrowId)));
 
   return (
     <div className="card">
@@ -83,6 +104,15 @@ export default function EscrowActions({ contract, account, setStatus }) {
           title="Solo el Arbiter — reembolsa al Buyer"
         >
           Resolver → Buyer
+        </button>
+
+        <button
+          className="btn btn-secondary"
+          onClick={handleClaimTimeout}
+          disabled={loading || escrowId === ""}
+          title="Permite recuperar fondos si el escrow expiró"
+        >
+          Claim Timeout
         </button>
       </div>
     </div>
