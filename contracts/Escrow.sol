@@ -7,6 +7,19 @@ pragma solidity ^0.8.20;
 /// @dev Implements dispute resolution and safe fund transfer patterns
 contract Escrow {
 
+    address public owner;
+
+    event OwnershipTransferred(address indexed oldOwner, address indexed newOwner);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner");
+        _;
+    }
+
+    /// @notice Initializes the contract setting the deployer as the owner
+    constructor() {
+        owner = msg.sender;
+    }
 
     /// @notice Represents the state of an escrow
     /// AWAITING_DELIVERY: Funds are locked, waiting for confirmation
@@ -27,10 +40,15 @@ contract Escrow {
         address arbiter;
         uint256 amount;
         State state;
+        uint256 deadline;
     }
 
     uint256 public escrowCount;
+    uint256 public constant ESCROW_DURATION = 7 days;
     mapping(uint256 => EscrowData) public escrows;
+    mapping(address => uint256[]) public escrowsByBuyer;
+    mapping(address => uint256[]) public escrowsBySeller;
+    mapping(address => uint256[]) public escrowsByArbiter;
 
     event EscrowCreated(
         uint256 indexed escrowId,
@@ -81,8 +99,13 @@ contract Escrow {
             seller: _seller,
             arbiter: _arbiter,
             amount: msg.value,
-            state: State.AWAITING_DELIVERY
+            state: State.AWAITING_DELIVERY,
+            deadline: block.timestamp + ESCROW_DURATION
         });
+
+        escrowsByBuyer[msg.sender].push(escrowId);
+        escrowsBySeller[_seller].push(escrowId);
+        escrowsByArbiter[_arbiter].push(escrowId);
 
         emit EscrowCreated(escrowId, msg.sender, _seller, _arbiter, msg.value);
 
@@ -98,6 +121,7 @@ contract Escrow {
         EscrowData storage e = escrows[_escrowId];
         
         require(e.state == State.AWAITING_DELIVERY, "Invalid state");
+        require(block.timestamp <= e.deadline, "Escrow expired");
 
         uint256 amount = e.amount;
         address payable seller = e.seller;
@@ -121,6 +145,7 @@ contract Escrow {
 
         require(msg.sender == e.buyer || msg.sender == e.seller, "Unauthorized");
         require(e.state == State.AWAITING_DELIVERY, "Invalid state");
+        require(block.timestamp <= e.deadline, "Escrow expired");
 
         e.state = State.DISPUTED;
 
@@ -155,5 +180,53 @@ contract Escrow {
         }
 
         emit DisputeResolved(_escrowId, releaseToSeller);
+    }
+
+    /// @notice Allows refund to buyer if escrow deadline has passed without resolution
+    /// @param _escrowId ID of the escrow
+    /// @dev Can be called by anyone, but only executes if deadline has expired
+    /// @dev Prevents funds from being locked indefinitely when no action is taken
+    /// @dev Uses checks-effects-interactions pattern
+    function claimTimeout(uint256 _escrowId) external escrowExists(_escrowId) {
+        EscrowData storage e = escrows[_escrowId];
+
+        require(block.timestamp > e.deadline, "Not expired");
+        require(e.state == State.AWAITING_DELIVERY, "Invalid state");
+
+        uint256 amount = e.amount;
+
+        e.amount = 0;
+        e.state = State.REFUNDED;
+
+        (bool success, ) = e.buyer.call{value: amount}("");
+        require(success, "Refund failed");
+    }
+
+    /// @notice Transfers contract ownership to a new address
+    /// @param newOwner Address of the new owner
+    /// @dev Can only be called by the current owner
+    /// @dev Emits an OwnershipTransferred event upon success
+    function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "Invalid address");
+
+        address oldOwner = owner;
+        owner = newOwner;
+
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+
+    /// @notice Returns all escrow IDs for a given buyer
+    function getEscrowsByBuyer(address _buyer) external view returns (uint256[] memory) {
+        return escrowsByBuyer[_buyer];
+    }
+
+    /// @notice Returns all escrow IDs for a given seller
+    function getEscrowsBySeller(address _seller) external view returns (uint256[] memory) {
+        return escrowsBySeller[_seller];
+    }
+
+    /// @notice Returns all escrow IDs for a given arbiter
+    function getEscrowsByArbiter(address _arbiter) external view returns (uint256[] memory) {
+        return escrowsByArbiter[_arbiter];
     }
 }

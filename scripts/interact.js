@@ -60,9 +60,7 @@ async function resolve(escrow, arbiter, id, sellerWins, buyer, seller) {
   const beforeSeller = await ethers.provider.getBalance(seller.address);
   const beforeBuyer = await ethers.provider.getBalance(buyer.address);
 
-  const tx = await escrow
-    .connect(arbiter)
-    .resolveDispute(id, sellerWins);
+  const tx = await escrow.connect(arbiter).resolveDispute(id, sellerWins);
 
   await tx.wait();
 
@@ -71,21 +69,57 @@ async function resolve(escrow, arbiter, id, sellerWins, buyer, seller) {
 
   if (sellerWins) {
     console.log("Winner: SELLER");
-    console.log("Seller received:", ethers.formatEther(afterSeller - beforeSeller));
+    console.log(
+      "Seller received:",
+      ethers.formatEther(afterSeller - beforeSeller),
+    );
   } else {
     console.log("Winner: BUYER");
-    console.log("Buyer refunded:", ethers.formatEther(afterBuyer - beforeBuyer));
+    console.log(
+      "Buyer refunded:",
+      ethers.formatEther(afterBuyer - beforeBuyer),
+    );
   }
+}
+
+async function timeout(escrow, id, buyer) {
+  console.log("\n--- CLAIM TIMEOUT ---");
+
+  const before = await ethers.provider.getBalance(buyer.address);
+
+  const tx = await escrow.connect(buyer).claimTimeout(id);
+  await tx.wait();
+
+  const after = await ethers.provider.getBalance(buyer.address);
+
+  console.log("Buyer refunded:", ethers.formatEther(after - before));
 }
 
 async function printState(escrow, id) {
   const data = await escrow.escrows(id);
-  const contractBalance = await ethers.provider.getBalance(await escrow.getAddress());
+  const contractBalance = await ethers.provider.getBalance(
+    await escrow.getAddress(),
+  );
+  const now = Math.floor(Date.now() / 1000);
 
   console.log("\n--- STATE ---");
   console.log("State:", STATES[Number(data.state)]);
   console.log("Amount:", ethers.formatEther(data.amount));
   console.log("Contract balance:", ethers.formatEther(contractBalance));
+  console.log("Deadline:", data.deadline.toString());
+  console.log("Expired:", now > Number(data.deadline));
+}
+
+async function printUserEscrows(escrow, buyer, seller, arbiter) {
+  console.log("\n--- USER ESCROWS ---");
+
+  const buyerEscrows = await escrow.getEscrowsByBuyer(buyer.address);
+  const sellerEscrows = await escrow.getEscrowsBySeller(seller.address);
+  const arbiterEscrows = await escrow.getEscrowsByArbiter(arbiter.address);
+
+  console.log("Buyer escrows:", buyerEscrows.map(e => e.toString()));
+  console.log("Seller escrows:", sellerEscrows.map(e => e.toString()));
+  console.log("Arbiter escrows:", arbiterEscrows.map(e => e.toString()));
 }
 
 async function main() {
@@ -101,6 +135,7 @@ async function main() {
   switch (action) {
     case "full":
       id = await create(escrow, buyer, seller, arbiter);
+      await printUserEscrows(escrow, buyer, seller, arbiter);
       await dispute(escrow, buyer, id);
       await resolve(escrow, arbiter, id, true, buyer, seller);
       await printState(escrow, id);
@@ -124,12 +159,21 @@ async function main() {
       await printState(escrow, escrowId);
       break;
 
+    case "timeout":
+      if (!escrowId) throw new Error("ESCROW_ID missing");
+      await timeout(escrow, escrowId, buyer);
+      await printState(escrow, escrowId);
+      break;
+
     default:
       console.log("Uso:");
       console.log("ACTION=full yarn local:interact");
       console.log("ACTION=confirm ESCROW_ID=0 yarn local:interact");
       console.log("ACTION=dispute ESCROW_ID=0 yarn local:interact");
-      console.log("ACTION=resolve ESCROW_ID=0 SELLER_WINS=true yarn local:interact");
+      console.log(
+        "ACTION=resolve ESCROW_ID=0 SELLER_WINS=true yarn local:interact",
+      );
+      console.log("ACTION=timeout ESCROW_ID=0 yarn local:interact");
   }
 }
 
