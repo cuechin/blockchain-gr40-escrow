@@ -93,6 +93,22 @@ describe("Escrow", function () {
         }),
       ).to.be.revertedWith("Seller can't be arbiter");
     });
+
+    it("should index escrows correctly by user", async function () {
+      const amount = ethers.parseEther("1.0");
+
+      await escrow
+        .connect(buyer)
+        .createEscrow(seller.address, arbiter.address, { value: amount });
+
+      const buyerEscrows = await escrow.getEscrowsByBuyer(buyer.address);
+      const sellerEscrows = await escrow.getEscrowsBySeller(seller.address);
+      const arbiterEscrows = await escrow.getEscrowsByArbiter(arbiter.address);
+
+      expect(buyerEscrows[0]).to.equal(0);
+      expect(sellerEscrows[0]).to.equal(0);
+      expect(arbiterEscrows[0]).to.equal(0);
+    });
   });
 
   describe("confirmDelivery", function () {
@@ -148,6 +164,21 @@ describe("Escrow", function () {
       await escrow.connect(buyer).confirmDelivery(0);
       await expect(escrow.connect(buyer).confirmDelivery(0)).to.be.revertedWith(
         "Invalid state",
+      );
+    });
+
+    it("should revert confirmDelivery if escrow expired", async function () {
+      const amount = ethers.parseEther("1.0");
+
+      await escrow
+        .connect(buyer)
+        .createEscrow(seller.address, arbiter.address, { value: amount });
+
+      await network.provider.send("evm_increaseTime", [7 * 24 * 60 * 60 + 1]);
+      await network.provider.send("evm_mine");
+
+      await expect(escrow.connect(buyer).confirmDelivery(0)).to.be.revertedWith(
+        "Escrow expired",
       );
     });
   });
@@ -206,6 +237,21 @@ describe("Escrow", function () {
 
       await expect(escrow.connect(buyer).raiseDispute(0)).to.be.revertedWith(
         "Invalid state",
+      );
+    });
+
+    it("should revert raiseDispute if escrow expired", async function () {
+      const amount = ethers.parseEther("1.0");
+
+      await escrow
+        .connect(buyer)
+        .createEscrow(seller.address, arbiter.address, { value: amount });
+
+      await network.provider.send("evm_increaseTime", [7 * 24 * 60 * 60 + 1]);
+      await network.provider.send("evm_mine");
+
+      await expect(escrow.connect(buyer).raiseDispute(0)).to.be.revertedWith(
+        "Escrow expired",
       );
     });
   });
@@ -301,6 +347,81 @@ describe("Escrow", function () {
       await expect(
         escrow.connect(arbiter).resolveDispute(0, true),
       ).to.be.revertedWith("Isn't in dispute");
+    });
+  });
+  describe("claimTimeout", function () {
+    it("should refund buyer after deadline via claimTimeout", async function () {
+      const amount = ethers.parseEther("1.0");
+
+      await escrow
+        .connect(buyer)
+        .createEscrow(seller.address, arbiter.address, { value: amount });
+
+      const before = await ethers.provider.getBalance(buyer.address);
+
+      await network.provider.send("evm_increaseTime", [7 * 24 * 60 * 60 + 1]);
+      await network.provider.send("evm_mine");
+
+      const tx = await escrow.connect(buyer).claimTimeout(0);
+      const receipt = await tx.wait();
+
+      const gasUsed = receipt.gasUsed * receipt.gasPrice;
+
+      const after = await ethers.provider.getBalance(buyer.address);
+
+      expect(after).to.be.closeTo(
+        before + amount - gasUsed,
+        ethers.parseEther("0.001"),
+      );
+
+      const data = await escrow.escrows(0);
+      expect(data.state).to.equal(3); // REFUNDED
+    });
+
+    it("should revert claimTimeout if not expired", async function () {
+      const amount = ethers.parseEther("1.0");
+
+      await escrow
+        .connect(buyer)
+        .createEscrow(seller.address, arbiter.address, { value: amount });
+
+      await expect(escrow.connect(buyer).claimTimeout(0)).to.be.revertedWith(
+        "Not expired",
+      );
+    });
+
+    it("should revert claimTimeout if already processed", async function () {
+      const amount = ethers.parseEther("1.0");
+
+      await escrow
+        .connect(buyer)
+        .createEscrow(seller.address, arbiter.address, { value: amount });
+
+      await network.provider.send("evm_increaseTime", [7 * 24 * 60 * 60 + 1]);
+      await network.provider.send("evm_mine");
+
+      await escrow.connect(buyer).claimTimeout(0);
+
+      await expect(escrow.connect(buyer).claimTimeout(0)).to.be.revertedWith(
+        "Invalid state",
+      );
+    });
+  });
+
+  describe("ownership", function () {
+    it("should set deployer as owner", async function () {
+      expect(await escrow.owner()).to.equal(buyer.address);
+    });
+
+    it("should transfer ownership", async function () {
+      await escrow.connect(buyer).transferOwnership(seller.address);
+      expect(await escrow.owner()).to.equal(seller.address);
+    });
+
+    it("should revert if non-owner transfers ownership", async function () {
+      await expect(
+        escrow.connect(seller).transferOwnership(arbiter.address),
+      ).to.be.revertedWith("Only owner");
     });
   });
 });
