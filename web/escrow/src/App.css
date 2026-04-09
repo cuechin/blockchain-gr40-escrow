@@ -93,6 +93,11 @@ body {
   color: #6ee7b7;
 }
 
+.badge.network {
+  background: #1e3a8a;
+  color: #bfdbfe;
+}
+
 .badge.buyer {
   background: #1e3a5f;
   color: #93c5fd;
