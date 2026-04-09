@@ -89,7 +89,7 @@ Esta arquitectura refleja el modelo real de interacción en aplicaciones Web3, d
 | Entorno de desarrollo | Hardhat |
 | Blockchain local | Hardhat Network |
 | Testnet | Polygon Amoy |
-| Frontend | HTML, CSS, JavaScript |
+| Frontend | React 18 + Vite |
 | Librería Web3 | ethers.js |
 | Wallet | MetaMask |
 | Testing | Chai + Hardhat Chai Matchers |
@@ -107,8 +107,19 @@ blockchain-gr40-escrow/
 │   └── Escrow.js             # Tests unitarios del contrato
 ├── web/
 │   └── escrow/
-│       ├── index.html        # Interfaz de usuario
-│       └── app.js            # Lógica de conexión con el contrato
+│       ├── index.html        # Entry point HTML
+│       ├── package.json      # Dependencias del frontend
+│       ├── vite.config.js    # Configuración de Vite
+│       └── src/
+│           ├── main.jsx      # Punto de entrada React
+│           ├── App.jsx       # Componente principal
+│           ├── App.css       # Estilos
+│           ├── contract.js   # ABI y dirección del contrato
+│           └── components/
+│               ├── ConnectWallet.jsx
+│               ├── CreateEscrow.jsx
+│               ├── EscrowDetails.jsx
+│               └── EscrowActions.jsx
 ├── .env.example              # Variables de entorno de ejemplo
 ├── hardhat.config.js         # Configuración de Hardhat y redes
 ├── package.json              # Dependencias del proyecto
@@ -275,3 +286,66 @@ cp .env.example .env
 
 yarn amoy:deploy
 ```
+
+---
+
+## Interfaz Web (DApp)
+
+La DApp permite interactuar con el Smart Contract desde el navegador usando MetaMask.
+
+### Prerrequisitos
+
+- MetaMask instalado en el navegador
+- Red **Polygon Amoy Testnet** agregada en MetaMask
+- POL de testnet en la cuenta (obtener desde un faucet de Amoy)
+
+### Instalar dependencias del frontend
+
+```bash
+cd web/escrow
+yarn install
+```
+
+### Levantar en modo desarrollo
+
+```bash
+cd web/escrow
+yarn dev
+```
+
+Se abre automáticamente en `http://localhost:3000`.
+
+### Build de producción
+
+```bash
+cd web/escrow
+yarn build
+```
+
+Los archivos se generan en `web/escrow/dist/`.
+
+### Funcionalidades de la interfaz
+
+1. **Conectar MetaMask**: clic en el botón para vincular la wallet. La DApp muestra la cuenta conectada y un link al contrato en PolygonScan.
+2. **Crear Escrow**: formulario donde el Buyer ingresa la dirección del Seller, del Arbiter y el monto en POL. Al enviar, MetaMask solicita la firma.
+3. **Consultar Escrow**: ingresando el ID del escrow se visualiza el estado actual, los actores, el monto retenido y el rol del usuario conectado.
+4. **Acciones**:
+   - **Confirmar Entrega** (solo Buyer): libera los fondos al Seller.
+   - **Abrir Disputa** (Buyer o Seller): bloquea los fondos hasta resolución.
+   - **Resolver → Seller** (solo Arbiter): transfiere fondos al Seller.
+   - **Resolver → Buyer** (solo Arbiter): reembolsa al Buyer.
+
+### Configuración del contrato
+
+La dirección del contrato desplegado en Amoy se encuentra en `web/escrow/src/contract.js`. Si se redespliega el contrato, actualizar la constante `CONTRACT_ADDRESS` con la nueva dirección.
+
+### Probar en red local
+
+Para probar contra el nodo local de Hardhat en lugar de Amoy:
+
+1. Levantar el nodo: `yarn local:node`
+2. Desplegar: `yarn local:deploy`
+3. En MetaMask, agregar red personalizada: RPC `http://127.0.0.1:8545`, Chain ID `31337`
+4. Importar cuentas de prueba usando las private keys que imprime `yarn local:node`
+5. Actualizar `CONTRACT_ADDRESS` en `web/escrow/src/contract.js` con la dirección del deploy local
+6. Levantar la DApp: `cd web/escrow && yarn dev`
