@@ -1,1 +1,2 @@
-// Escrow DApp - TODO: Implementar en Tarea 3
+// Legacy file — the DApp now lives in src/ (React + Vite)
+// Run: cd web/escrow && yarn dev

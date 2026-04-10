@@ -89,7 +89,7 @@ Esta arquitectura refleja el modelo real de interacción en aplicaciones Web3, d
 | Entorno de desarrollo | Hardhat |
 | Blockchain local | Hardhat Network |
 | Testnet | Polygon Amoy |
-| Frontend | HTML, CSS, JavaScript |
+| Frontend | React 18 + Vite |
 | Librería Web3 | ethers.js |
 | Wallet | MetaMask |
 | Testing | Chai + Hardhat Chai Matchers |
@@ -107,8 +107,19 @@ blockchain-gr40-escrow/
 │   └── Escrow.js             # Tests unitarios del contrato
 ├── web/
 │   └── escrow/
-│       ├── index.html        # Interfaz de usuario
-│       └── app.js            # Lógica de conexión con el contrato
+│       ├── index.html        # Entry point HTML
+│       ├── package.json      # Dependencias del frontend
+│       ├── vite.config.js    # Configuración de Vite
+│       └── src/
+│           ├── main.jsx      # Punto de entrada React
+│           ├── App.jsx       # Componente principal
+│           ├── App.css       # Estilos
+│           ├── contract.js   # ABI y dirección del contrato
+│           └── components/
+│               ├── ConnectWallet.jsx
+│               ├── CreateEscrow.jsx
+│               ├── EscrowDetails.jsx
+│               └── EscrowActions.jsx
 ├── .env.example              # Variables de entorno de ejemplo
 ├── hardhat.config.js         # Configuración de Hardhat y redes
 ├── package.json              # Dependencias del proyecto
@@ -275,3 +286,114 @@ cp .env.example .env
 
 yarn amoy:deploy
 ```
+
+---
+
+## Interfaz Web (DApp)
+
+La DApp permite interactuar con el Smart Contract desde el navegador usando MetaMask.
+
+### Prerrequisitos
+
+- MetaMask instalado en el navegador
+- Red **Polygon Amoy Testnet** agregada en MetaMask
+- POL de testnet en la cuenta (obtener desde un faucet de Amoy)
+
+### Instalar dependencias del frontend
+
+```bash
+cd web/escrow
+yarn install
+```
+
+### Levantar en modo desarrollo
+
+```bash
+cd web/escrow
+yarn dev
+```
+
+Se abre automáticamente en `http://localhost:3000`.
+
+### Build de producción
+
+```bash
+cd web/escrow
+yarn build
+```
+
+Los archivos se generan en `web/escrow/dist/`.
+
+### Funcionalidades de la interfaz
+
+1. **Conectar MetaMask**: clic en el botón para vincular la wallet. La DApp muestra la cuenta conectada y un link al contrato en PolygonScan.
+2. **Crear Escrow**: formulario donde el Buyer ingresa la dirección del Seller, del Arbiter y el monto en POL. Al enviar, MetaMask solicita la firma.
+3. **Consultar Escrow**: ingresando el ID del escrow se visualiza el estado actual, los actores, el monto retenido y el rol del usuario conectado.
+4. **Acciones**:
+   - **Confirmar Entrega** (solo Buyer): libera los fondos al Seller.
+   - **Abrir Disputa** (Buyer o Seller): bloquea los fondos hasta resolución.
+   - **Resolver → Seller** (solo Arbiter): transfiere fondos al Seller.
+   - **Resolver → Buyer** (solo Arbiter): reembolsa al Buyer.
+
+### Configuración del contrato
+
+La dirección del contrato desplegado en Amoy se encuentra en `web/escrow/src/contract.js`. Si se redespliega el contrato, actualizar la constante `CONTRACT_ADDRESS` con la nueva dirección.
+
+### Probar en red local
+
+Para probar contra el nodo local de Hardhat en lugar de Amoy:
+
+1. Levantar el nodo: `yarn local:node`
+2. Desplegar: `yarn local:deploy`
+3. En MetaMask, agregar red personalizada: RPC `http://127.0.0.1:8545`, Chain ID `31337`
+4. Importar cuentas de prueba usando las private keys que imprime `yarn local:node`
+5. Actualizar `CONTRACT_ADDRESS` en `web/escrow/src/contract.js` con la dirección del deploy local
+6. Levantar la DApp: `cd web/escrow && yarn dev`
+
+---
+
+## Despliegue y pruebas en Polygon Amoy
+
+### Contrato desplegado
+
+| Dato | Valor |
+|------|-------|
+| **Red** | Polygon Amoy Testnet |
+| **Contrato** | [`0x0384B97Ca3D22B8e8340B02B3475F85476aD5EA5`](https://amoy.polygonscan.com/address/0x0384B97Ca3D22B8e8340B02B3475F85476aD5EA5) |
+| **Deployer** | [`0xF68675aDdE468b722966b22b87133Bad87D5eCd6`](https://amoy.polygonscan.com/address/0xF68675aDdE468b722966b22b87133Bad87D5eCd6) |
+
+### Pruebas realizadas on-chain
+
+#### Escrow #0 — Flujo sin disputa (confirmDelivery)
+
+| Paso | Tx |
+|------|----|
+| createEscrow (0.01 POL) | [`0x83e01b...`](https://amoy.polygonscan.com/tx/0x83e01b63a2482f1865b0725e8f1903f56c5fa153a9f11c92f5af527905353e8b) |
+| confirmDelivery → Seller recibe 0.01 POL | [`0x1506a4...`](https://amoy.polygonscan.com/tx/0x1506a492f0ca2eb01fa1aa25db73599fd2a2779f594c5d8453ca2662511db04f) |
+| **Estado final** | **COMPLETED** |
+
+#### Escrow #1 — Disputa resuelta a favor del Seller
+
+| Paso | Tx |
+|------|----|
+| createEscrow (0.01 POL) | [`0x44581c...`](https://amoy.polygonscan.com/tx/0x44581c335c44be1a8dcea68ba834e9b7c9a0aff1b36e0545746ff6fa49550434) |
+| raiseDispute | [`0xd00ed6...`](https://amoy.polygonscan.com/tx/0xd00ed63082504cff4c2c9d282db589b766a66f51fbcb168e08a19966200c339f) |
+| resolveDispute(true) → Seller recibe 0.01 POL | [`0x0fa75e...`](https://amoy.polygonscan.com/tx/0x0fa75e5a6d9d8ab088a18149b1ee5fa231977f3d61cceea6b03c7af6e0cfc232) |
+| **Estado final** | **COMPLETED** |
+
+#### Escrow #3 — Disputa resuelta a favor del Buyer
+
+| Paso | Tx |
+|------|----|
+| createEscrow (0.01 POL) | [`0x07f0b7...`](https://amoy.polygonscan.com/tx/0x07f0b7a8f25a82c8fd168bab6781a2128a01ce12981bc2079f1ed331a3212e0f) |
+| raiseDispute | [`0x01e1e4...`](https://amoy.polygonscan.com/tx/0x01e1e4f7f5619d720b4630edc4abeea42c1e1b6fdce2f49f4c79cb3b19feb713) |
+| resolveDispute(false) → Buyer reembolsado 0.01 POL | [`0x361452...`](https://amoy.polygonscan.com/tx/0x361452b083653588510646db06b0322181d9e586ff5d2b8731136dffe35adfc0) |
+| **Estado final** | **REFUNDED** |
+
+### Actores de prueba
+
+| Rol | Dirección |
+|-----|----------|
+| Buyer | [`0xF68675aDdE468b722966b22b87133Bad87D5eCd6`](https://amoy.polygonscan.com/address/0xF68675aDdE468b722966b22b87133Bad87D5eCd6) |
+| Seller | [`0xa70C55497eAD474DF12D755A9779661B47a0f15e`](https://amoy.polygonscan.com/address/0xa70C55497eAD474DF12D755A9779661B47a0f15e) |
+| Arbiter | [`0x5faf5678b20C3f6dC20894E6745e260776cd1486`](https://amoy.polygonscan.com/address/0x5faf5678b20C3f6dC20894E6745e260776cd1486) |
