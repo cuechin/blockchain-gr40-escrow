@@ -1,2 +1,399 @@
-# blockchain-gr40-escrow
-Proyecto final del curso Blockchain y Ledgers Distribuidos GR40: implementación de un sistema escrow mediante smart contracts.
+# Escrow DApp
+
+Sistema de custodia descentralizado que permite a compradores y vendedores realizar transacciones seguras mediante Smart Contracts, con resolución de disputas a través de un árbitro neutral.
+
+---
+
+## Descripción del Sistema
+
+Un **Escrow** (custodia) es un mecanismo financiero en el que un tercero neutral retiene fondos durante una transacción entre dos partes (comprador y vendedor), liberándolos únicamente cuando se cumplen las condiciones acordadas.
+
+Este proyecto implementa un sistema de Escrow descentralizado sobre la blockchain de Polygon (Amoy Testnet), eliminando la necesidad de confiar en un intermediario centralizado. El Smart Contract actúa como el custodio imparcial que:
+
+- **Recibe y custodia** los fondos depositados por el comprador.
+- **Libera el pago** al vendedor cuando el comprador confirma la recepción del bien o servicio.
+- **Permite reembolsos** al comprador si el vendedor no cumple, mediante la intervención de un árbitro.
+- **Resuelve disputas** a través de un árbitro designado que puede decidir a favor del comprador o vendedor.
+
+## Justificación del uso de Blockchain
+
+El uso de blockchain en este sistema permite:
+
+- **Descentralización**: elimina la necesidad de un intermediario confiable
+- **Inmutabilidad**: evita la manipulación de transacciones
+- **Transparencia**: todas las partes pueden auditar el estado del contrato
+- **Trustless**: comprador y vendedor no necesitan confiar entre sí
+
+Esto hace que el escrow sea más seguro y resistente a fraudes en comparación con soluciones centralizadas.
+
+### Actores del Sistema
+
+| Actor | Rol |
+|-------|-----|
+| **Comprador (Buyer)** | Deposita los fondos en el contrato. Confirma la entrega para liberar el pago. |
+| **Vendedor (Seller)** | Recibe el pago una vez que el comprador confirma o el árbitro falla a su favor. |
+| **Árbitro (Arbiter)** | Interviene solo en caso de disputa. Puede liberar fondos al vendedor o reembolsar al comprador. |
+
+### Funcionalidades Principales
+
+1. **Depositar fondos**: El comprador envía POL/ETH al contrato, iniciando el escrow.
+2. **Liberar pago**: El comprador confirma que recibió el bien/servicio y los fondos se transfieren al vendedor.
+3. **Abrir disputa**: Comprador o vendedor pueden abrir una disputa si hay desacuerdo.
+4. **Resolución por árbitro**: El árbitro decide si liberar al vendedor o reembolsar al comprador.
+
+## Modelo On-chain vs Off-chain
+
+### On-chain (Blockchain)
+- Custodia de fondos
+- Estados del escrow
+- Resolución de disputas
+- Transferencias de valor
+
+### Off-chain
+- Entrega del bien o servicio
+- Interacción del usuario (UI)
+- Decisiones humanas (confirmación, disputa)
+
+El sistema combina lógica on-chain segura con procesos off-chain inevitables en el mundo real. Este modelo se refleja en la arquitectura del sistema, donde el Smart Contract y la Blockchain representan la lógica on-chain, mientras que el frontend y la interacción del usuario corresponden a la capa off-chain.
+
+## Consideraciones de Seguridad
+
+- Validación de roles mediante `msg.sender`
+- Uso de `require` para garantizar condiciones válidas
+- Control de estados para evitar ejecuciones indebidas
+- Prevención de reentrancy en transferencias
+- Uso de patrón checks-effects-interactions
+- Restricción de roles del árbitro: no puede ser comprador ni vendedor, y solo puede actuar cuando el escrow está en estado `DISPUTED`
+
+---
+
+## Arquitectura
+
+El proyecto sigue una arquitectura típica de una DApp (Aplicación Descentralizada), compuesta por múltiples componentes que interactúan entre sí:
+
+- **Frontend (Web UI)**: Interfaz de usuario desarrollada en HTML, CSS y JavaScript.
+- **Wallet (MetaMask)**: Gestiona las cuentas del usuario y firma las transacciones.
+- **Provider (JSON-RPC)**: Canal de comunicación entre la aplicación y la blockchain.
+- **Smart Contract**: Implementa la lógica de negocio del escrow.
+- **Blockchain (EVM)**: Ejecuta y almacena el estado del contrato.
+
+Esta arquitectura refleja el modelo real de interacción en aplicaciones Web3, donde la firma de transacciones y la comunicación con la red están desacopladas del frontend.
+
+![Diagrama de Arquitectura](images/diagrama-arquitectura.jpg)
+
+### Stack Tecnológico
+
+| Componente | Tecnología |
+|------------|------------|
+| Smart Contract | Solidity ^0.8.20 |
+| Entorno de desarrollo | Hardhat |
+| Blockchain local | Hardhat Network |
+| Testnet | Polygon Amoy |
+| Frontend | React 18 + Vite |
+| Librería Web3 | ethers.js |
+| Wallet | MetaMask |
+| Testing | Chai + Hardhat Chai Matchers |
+
+### Estructura del Proyecto
+
+```
+blockchain-gr40-escrow/
+├── contracts/
+│   └── Escrow.sol            # Smart Contract del Escrow
+├── scripts/
+│   ├── deploy.js             # Script de despliegue
+│   └── interact.js           # Script de interacción por consola
+├── test/
+│   └── Escrow.js             # Tests unitarios del contrato
+├── web/
+│   └── escrow/
+│       ├── index.html        # Entry point HTML
+│       ├── package.json      # Dependencias del frontend
+│       ├── vite.config.js    # Configuración de Vite
+│       └── src/
+│           ├── main.jsx      # Punto de entrada React
+│           ├── App.jsx       # Componente principal
+│           ├── App.css       # Estilos
+│           ├── contract.js   # ABI y dirección del contrato
+│           └── components/
+│               ├── ConnectWallet.jsx
+│               ├── CreateEscrow.jsx
+│               ├── EscrowDetails.jsx
+│               └── EscrowActions.jsx
+├── .env.example              # Variables de entorno de ejemplo
+├── hardhat.config.js         # Configuración de Hardhat y redes
+├── package.json              # Dependencias del proyecto
+└── README.md                 # Este archivo
+```
+
+---
+
+## Flujo de Transacciones
+
+### Flujo Principal (Sin Disputa)
+
+El flujo inicia cuando el comprador crea el escrow y deposita los fondos en el contrato. 
+Una vez entregado el bien o servicio (off-chain), el comprador confirma la entrega, 
+lo que provoca la liberación automática de los fondos al vendedor.
+
+![Diagrama de Flujo Principal sin disputa](images/diagrama-secuencia-sin-disputa.jpg)
+
+### Flujo con Disputa
+
+Si existe desacuerdo entre las partes, cualquiera puede abrir una disputa. 
+En este estado, el contrato bloquea los fondos hasta que el árbitro interviene 
+y decide si liberar el pago al vendedor o reembolsar al comprador.
+
+![Diagrama de Flujo Principal con disputa](images/diagrama-secuencia-con-disputa.jpg)
+
+### Diagrama de Estados
+
+El contrato funciona como una máquina de estados, donde cada transición 
+está controlada por funciones específicas y validaciones de acceso, 
+garantizando que no se ejecuten acciones inválidas.
+
+![Diagrama de Estados](images/diagrama-estados.jpg)
+
+### Estados del Escrow
+
+| Estado | Descripción |
+|--------|-------------|
+| `AWAITING_DELIVERY` | Fondos depositados, esperando que el comprador confirme la entrega. |
+| `DISPUTED` | Una de las partes abrió una disputa. Solo el árbitro puede resolver. |
+| `COMPLETED` | Fondos liberados al vendedor. Transacción finalizada. |
+| `REFUNDED` | Fondos reembolsados al comprador. Transacción cancelada. |
+
+---
+
+## Diagrama de Componentes
+
+El diagrama de componentes muestra la interacción entre los elementos principales de la DApp. 
+El frontend gestiona la interfaz de usuario y utiliza ethers.js para comunicarse con el contrato inteligente. 
+MetaMask actúa como intermediario para firmar transacciones y conectarse a la red blockchain mediante el provider JSON-RPC. 
+El smart contract ejecuta la lógica de negocio on-chain, mientras que Hardhat se utiliza únicamente como entorno de desarrollo para compilación, testing y despliegue.
+
+![Diagrama de Componentes](images/diagrama-componentes.jpg)
+
+### Interacción entre Componentes
+
+| Componente | Responsabilidad | Comunica con |
+|------------|----------------|--------------|
+| **index.html** | Interfaz gráfica para el usuario | app.js |
+| **app.js** | Conecta la UI con el contrato vía ethers.js | MetaMask, Escrow.sol |
+| **MetaMask** | Firma transacciones y gestiona cuentas | Blockchain (JSON-RPC) |
+| **Escrow.sol** | Lógica de negocio on-chain: custodia, liberación, disputas | Blockchain (EVM) |
+| **Hardhat** | Compilación, testing y despliegue (entorno de desarrollo) | Escrow.sol, Blockchain |
+
+---
+
+## Cómo Ejecutar
+
+### Prerrequisitos
+
+- Node.js >= 18
+- Yarn
+- MetaMask (extensión del navegador)
+
+### Instalación
+
+```bash
+yarn install
+```
+
+### Compilar Contratos
+
+```bash
+yarn compile
+```
+
+### Ejecutar Tests
+
+```bash
+yarn test
+```
+
+### Desplegar Localmente
+
+```bash
+# Terminal 1: Levantar nodo local
+yarn local:node
+
+# Terminal 2: Desplegar contrato
+yarn local:deploy
+```
+
+### Interactuar Localmente
+
+Con el nodo local corriendo (`yarn local:node`) y el contrato desplegado (`yarn local:deploy`), ejecutar el script de interacción indicando la dirección del contrato y la acción deseada.
+
+#### Flujo completo (createEscrow + confirmDelivery)
+
+```bash
+ACTION=full ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+```
+
+#### Acciones individuales
+
+```bash
+# Confirmar entrega de un escrow existente
+ACTION=confirm ESCROW_ID=0 ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+
+# Abrir disputa
+ACTION=dispute ESCROW_ID=0 ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+
+# Resolver disputa (el árbitro decide a favor del seller o buyer)
+ACTION=resolve ESCROW_ID=0 SELLER_WINS=true ESCROW_CONTRACT_ADDRESS=0xDIRECCION_DEL_CONTRATO yarn local:interact
+```
+
+Reemplazar `0xDIRECCION_DEL_CONTRATO` con la dirección que imprimió el deploy.
+
+El flujo completo (`ACTION=full`) realiza automáticamente:
+
+1. **createEscrow**: El buyer (Account #0) deposita 1 ETH en el contrato, asignando al seller (Account #1) y al arbiter (Account #2).
+2. **confirmDelivery**: El buyer confirma la entrega, los fondos se transfieren al seller y el estado cambia a `COMPLETED`.
+
+Ejemplo de salida esperada:
+
+```
+Contract: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+--- CREATE ESCROW ---
+Buyer: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Seller: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+Arbiter: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+Amount: 1.0 ETH
+Escrow ID: 0
+
+--- RAISE DISPUTE ---
+Dispute opened
+
+--- RESOLVE DISPUTE ---
+Winner: SELLER
+Seller received: 1.0
+
+--- STATE ---
+State: COMPLETED
+Amount: 0.0
+Contract balance: 0.0
+```
+
+### Desplegar en Polygon Amoy
+
+```bash
+# Configurar .env con las credenciales
+cp .env.example .env
+# Editar .env con tu PRIVATE_KEY y AMOY_RPC_URL
+
+yarn amoy:deploy
+```
+
+---
+
+## Interfaz Web (DApp)
+
+La DApp permite interactuar con el Smart Contract desde el navegador usando MetaMask.
+
+### Prerrequisitos
+
+- MetaMask instalado en el navegador
+- Red **Polygon Amoy Testnet** agregada en MetaMask
+- POL de testnet en la cuenta (obtener desde un faucet de Amoy)
+
+### Instalar dependencias del frontend
+
+```bash
+cd web/escrow
+yarn install
+```
+
+### Levantar en modo desarrollo
+
+```bash
+cd web/escrow
+yarn dev
+```
+
+Se abre automáticamente en `http://localhost:3000`.
+
+### Build de producción
+
+```bash
+cd web/escrow
+yarn build
+```
+
+Los archivos se generan en `web/escrow/dist/`.
+
+### Funcionalidades de la interfaz
+
+1. **Conectar MetaMask**: clic en el botón para vincular la wallet. La DApp muestra la cuenta conectada y un link al contrato en PolygonScan.
+2. **Crear Escrow**: formulario donde el Buyer ingresa la dirección del Seller, del Arbiter y el monto en POL. Al enviar, MetaMask solicita la firma.
+3. **Consultar Escrow**: ingresando el ID del escrow se visualiza el estado actual, los actores, el monto retenido y el rol del usuario conectado.
+4. **Acciones**:
+   - **Confirmar Entrega** (solo Buyer): libera los fondos al Seller.
+   - **Abrir Disputa** (Buyer o Seller): bloquea los fondos hasta resolución.
+   - **Resolver → Seller** (solo Arbiter): transfiere fondos al Seller.
+   - **Resolver → Buyer** (solo Arbiter): reembolsa al Buyer.
+
+### Configuración del contrato
+
+La dirección del contrato desplegado en Amoy se encuentra en `web/escrow/src/contract.js`. Si se redespliega el contrato, actualizar la constante `CONTRACT_ADDRESS` con la nueva dirección.
+
+### Probar en red local
+
+Para probar contra el nodo local de Hardhat en lugar de Amoy:
+
+1. Levantar el nodo: `yarn local:node`
+2. Desplegar: `yarn local:deploy`
+3. En MetaMask, agregar red personalizada: RPC `http://127.0.0.1:8545`, Chain ID `31337`
+4. Importar cuentas de prueba usando las private keys que imprime `yarn local:node`
+5. Actualizar `CONTRACT_ADDRESS` en `web/escrow/src/contract.js` con la dirección del deploy local
+6. Levantar la DApp: `cd web/escrow && yarn dev`
+
+---
+
+## Despliegue y pruebas en Polygon Amoy
+
+### Contrato desplegado
+
+| Dato | Valor |
+|------|-------|
+| **Red** | Polygon Amoy Testnet |
+| **Contrato** | [`0x0384B97Ca3D22B8e8340B02B3475F85476aD5EA5`](https://amoy.polygonscan.com/address/0x0384B97Ca3D22B8e8340B02B3475F85476aD5EA5) |
+| **Deployer** | [`0xF68675aDdE468b722966b22b87133Bad87D5eCd6`](https://amoy.polygonscan.com/address/0xF68675aDdE468b722966b22b87133Bad87D5eCd6) |
+
+### Pruebas realizadas on-chain
+
+#### Escrow #0 — Flujo sin disputa (confirmDelivery)
+
+| Paso | Tx |
+|------|----|
+| createEscrow (0.01 POL) | [`0x83e01b...`](https://amoy.polygonscan.com/tx/0x83e01b63a2482f1865b0725e8f1903f56c5fa153a9f11c92f5af527905353e8b) |
+| confirmDelivery → Seller recibe 0.01 POL | [`0x1506a4...`](https://amoy.polygonscan.com/tx/0x1506a492f0ca2eb01fa1aa25db73599fd2a2779f594c5d8453ca2662511db04f) |
+| **Estado final** | **COMPLETED** |
+
+#### Escrow #1 — Disputa resuelta a favor del Seller
+
+| Paso | Tx |
+|------|----|
+| createEscrow (0.01 POL) | [`0x44581c...`](https://amoy.polygonscan.com/tx/0x44581c335c44be1a8dcea68ba834e9b7c9a0aff1b36e0545746ff6fa49550434) |
+| raiseDispute | [`0xd00ed6...`](https://amoy.polygonscan.com/tx/0xd00ed63082504cff4c2c9d282db589b766a66f51fbcb168e08a19966200c339f) |
+| resolveDispute(true) → Seller recibe 0.01 POL | [`0x0fa75e...`](https://amoy.polygonscan.com/tx/0x0fa75e5a6d9d8ab088a18149b1ee5fa231977f3d61cceea6b03c7af6e0cfc232) |
+| **Estado final** | **COMPLETED** |
+
+#### Escrow #3 — Disputa resuelta a favor del Buyer
+
+| Paso | Tx |
+|------|----|
+| createEscrow (0.01 POL) | [`0x07f0b7...`](https://amoy.polygonscan.com/tx/0x07f0b7a8f25a82c8fd168bab6781a2128a01ce12981bc2079f1ed331a3212e0f) |
+| raiseDispute | [`0x01e1e4...`](https://amoy.polygonscan.com/tx/0x01e1e4f7f5619d720b4630edc4abeea42c1e1b6fdce2f49f4c79cb3b19feb713) |
+| resolveDispute(false) → Buyer reembolsado 0.01 POL | [`0x361452...`](https://amoy.polygonscan.com/tx/0x361452b083653588510646db06b0322181d9e586ff5d2b8731136dffe35adfc0) |
+| **Estado final** | **REFUNDED** |
+
+### Actores de prueba
+
+| Rol | Dirección |
+|-----|----------|
+| Buyer | [`0xF68675aDdE468b722966b22b87133Bad87D5eCd6`](https://amoy.polygonscan.com/address/0xF68675aDdE468b722966b22b87133Bad87D5eCd6) |
+| Seller | [`0xa70C55497eAD474DF12D755A9779661B47a0f15e`](https://amoy.polygonscan.com/address/0xa70C55497eAD474DF12D755A9779661B47a0f15e) |
+| Arbiter | [`0x5faf5678b20C3f6dC20894E6745e260776cd1486`](https://amoy.polygonscan.com/address/0x5faf5678b20C3f6dC20894E6745e260776cd1486) |
